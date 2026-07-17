@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    /* все стили без изменений (такие же, как в предыдущей версии) */
+    /* === Все стили без изменений (скопированы из вашего файла) === */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
       --dark: #0F172A;
@@ -632,10 +632,9 @@
   </div>
 
   <script>
-    // ==================== ВАШИ ДАННЫЕ TELEGRAM ====================
-    const BOT_TOKEN = '7953098750:AAFpG6nF20FQ5MNCseqes3Xs7ybbZZwQd3Q';
-    const CHAT_ID = '129689082';
-    // =============================================================
+    // ==================== ВАШИ ДАННЫЕ TELEGRAM (теперь используются в PHP) ====================
+    // В этом файле они не нужны, оставлены для справки, но можно удалить.
+    // ========================================================================================
 
     window.addEventListener('load', () => {
       document.getElementById('preloader').classList.add('hide');
@@ -681,7 +680,7 @@
       });
     });
 
-    // --- Калькулятор ---
+    // --- Калькулятор (без изменений) ---
     const areaInput = document.getElementById('areaInput');
     const daysRange = document.getElementById('daysRange');
     const daysLabel = document.getElementById('daysLabel');
@@ -753,7 +752,7 @@
     daysRange.addEventListener('input', updateCalculator);
     updateCalculator();
 
-    // --- Модалка и отправка в Telegram с расширенными данными ---
+    // --- Модалка и отправка через PHP-посредник ---
     function openModal() {
       document.getElementById('modal').classList.add('active');
     }
@@ -774,7 +773,7 @@
         return;
       }
 
-      // Получаем текущие параметры из калькулятора
+      // Получаем данные из калькулятора
       const area = parseInt(areaInput.value) || 0;
       const days = parseInt(daysRange.value) || 1;
       const counts = calcEquipment(area);
@@ -783,39 +782,33 @@
       const totalDaily = counts.household * dailyHouse + counts.semipro * dailySemi;
       const total = totalDaily * days;
 
-      // Формируем подробное сообщение
-      const lines = [
-        'Новая заявка с сайта СУШИМ',
-        `Имя: ${name}`,
-        `Телефон: ${phone}`,
-        '',
-        '--- Детали заказа ---',
-        `Площадь: ${area} м²`,
-        `Количество дней: ${days}`,
-        `Бытовые осушители: ${counts.household} шт. (цена за сутки: ${dailyHouse} ₽)`,
-        `Полупромышленные: ${counts.semipro} шт. (цена за сутки: ${dailySemi} ₽)`,
-        `Цена за сутки (всего): ${totalDaily} ₽`,
-        `Итоговая сумма: ${total} ₽`
-      ];
-
-      // Собираем текст с переносами %0A
-      const message = lines.join('%0A');
-
-      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${message}`;
+      // Подготавливаем FormData для отправки на PHP
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('phone', phone);
+      formData.append('area', area + ' м²');
+      formData.append('days', days);
+      formData.append('household', counts.household + ' шт. (цена за сутки: ' + dailyHouse + ' ₽)');
+      formData.append('semipro', counts.semipro + ' шт. (цена за сутки: ' + dailySemi + ' ₽)');
+      formData.append('daily_price', totalDaily + ' ₽');
+      formData.append('total', total + ' ₽');
 
       try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.ok) {
+        const response = await fetch('send.php', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.text();
+        if (result.trim() === 'ok') {
           alert('✅ Заявка отправлена! Мы свяжемся с вами.');
           closeModal();
           document.getElementById('modalName').value = '';
           document.getElementById('modalPhone').value = '';
         } else {
-          alert(`❌ Ошибка: ${data.description || 'неизвестная ошибка'}`);
+          alert('❌ Ошибка отправки. Попробуйте позже.');
         }
       } catch (error) {
-        alert(`❌ Ошибка соединения: ${error.message}. Попробуйте запустить страницу через локальный сервер.`);
+        alert('❌ Ошибка соединения. Проверьте интернет.');
       }
     });
 
