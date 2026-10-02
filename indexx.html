@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Учет аренды</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6;color:#111827}
+button,input,select{font:inherit}button{cursor:pointer}
+header{background:#111827;color:white;padding:16px max(16px,calc((100% - 1100px)/2));position:sticky;top:0;z-index:5}
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px}.logo{font-weight:800;font-size:20px}.sub{font-size:12px;color:#9ca3af}
+main{max-width:1100px;margin:auto;padding:16px}
+.nav{display:flex;gap:6px;overflow:auto;margin-bottom:16px}.nav button{white-space:nowrap;border:0;background:white;padding:10px 14px;border-radius:10px;color:#6b7280}.nav button.active{background:#2563eb;color:#fff;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.stat,.panel,.card{background:white;border:1px solid #e5e7eb;border-radius:14px}.stat{padding:14px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#6b7280}
+.panel{overflow:hidden}.panel-head{padding:14px 16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:10px;align-items:center}.panel-head h2{font-size:16px;margin:0}.search{width:260px;max-width:100%;padding:10px;border:1px solid #d1d5db;border-radius:9px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:14px}.card{padding:14px}.card-top{display:flex;justify-content:space-between;gap:10px}.card h3{font-size:16px;margin:0 0 3px}.muted{color:#6b7280;font-size:12px}.badge{border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;height:max-content}.ok{background:#dcfce7;color:#166534}.rent{background:#fef3c7;color:#92400e}.bad{background:#fee2e2;color:#991b1b}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.info div{background:#f9fafb;border-radius:8px;padding:9px;font-size:11px;color:#6b7280}.info b{display:block;color:#111827;font-size:13px;margin-top:2px}.btn{border:1px solid #d1d5db;background:white;padding:9px 12px;border-radius:9px}.primary{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b91c1c}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid #e5e7eb;font-size:13px}th{color:#6b7280;font-size:11px;background:#f9fafb}
+.empty{text-align:center;padding:40px;color:#6b7280}.hidden{display:none}
+.backdrop{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;justify-content:center;z-index:20}.modal{background:white;width:min(600px,100%);border-radius:18px 18px 0 0;max-height:90vh;overflow:auto}.modal-head{padding:16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between}.modal-body{padding:16px}.modal-foot{padding:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:12px;color:#6b7280;margin-bottom:5px}.field input,.field select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:9px}
+@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.panel-head{align-items:stretch;flex-direction:column}.search{width:100%}.form{grid-template-columns:1fr}table{min-width:650px}.table-scroll{overflow:auto}}
+</style>
+</head>
+<body>
+<header><div class="header"><div><div class="logo">Учет аренды</div><div class="sub">Оборудование · клиенты · цены</div></div><button class="btn primary" onclick="equipmentModal()">+ Оборудование</button></div></header>
+<main>
+<nav class="nav">
+<button class="active" data-page="equipment">Оборудование</button>
+<button data-page="clients">Клиенты</button>
+<button data-page="prices">Цены</button>
+<button data-page="history">История</button>
+</nav>
+
+<section id="equipment">
+<div class="stats" id="stats"></div>
+<div class="panel"><div class="panel-head"><h2 id="eqTitle">Доступно к сдаче</h2><input id="search" class="search" placeholder="Поиск..." oninput="render()"></div><div class="grid" id="cards"></div></div>
+</section>
+
+<section id="clients" class="panel hidden"><div class="panel-head"><h2>Клиенты</h2><button class="btn primary" onclick="clientModal()">+ Клиент</button></div><div class="table-scroll" id="clientsTable"></div></section>
+<section id="prices" class="panel hidden"><div class="panel-head"><h2>Цены</h2><button class="btn primary" onclick="priceModal()">+ Цена</button></div><div class="table-scroll" id="pricesTable"></div></section>
+<section id="history" class="panel hidden"><div class="panel-head"><h2>История операций</h2></div><div class="table-scroll" id="historyTable"></div></section>
+</main>
+
+<div class="backdrop" id="backdrop"><div class="modal"><div class="modal-head"><b id="modalTitle"></b><button class="btn" onclick="closeModal()">×</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFoot"></div></div></div>
+
+<script>
+const seed={
+equipment:[
+{id:1,name:"Sony FX3",code:"EQ-001",category:"Камера",price:4500,status:"available"},
+{id:2,name:"Aputure 600D Pro",code:"EQ-002",category:"Свет",price:3000,status:"available"},
+{id:3,name:"Sony 24-70 GM II",code:"EQ-003",category:"Объектив",price:1800,status:"rented",client:"Иван Петров",due:"2026-10-03"},
+{id:4,name:"DJI Ronin RS 3 Pro",code:"EQ-004",category:"Стабилизатор",price:2500,status:"available"}
+],
+clients:[
+{id:1,name:"Иван Петров",phone:"+7 999 123-45-67",email:"ivan@example.com",deals:1},
+{id:2,name:"ООО «Медиа Хаус»",phone:"+7 495 555-20-20",email:"office@example.com",deals:0}
+],
+prices:[
+{id:1,name:"Sony FX3",category:"Камера",day:4500,week:24000},
+{id:2,name:"Aputure 600D Pro",category:"Свет",day:3000,week:16000}
+],
+history:[]
+};
+let db=JSON.parse(localStorage.getItem("rental-db")||JSON.stringify(seed)), page="equipment";
+const save=()=>localStorage.setItem("rental-db",JSON.stringify(db));
+const money=n=>new Intl.NumberFormat("ru-RU").format(n)+" ₽";
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");page=b.dataset.page;document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));document.getElementById(page).classList.remove("hidden");render()});
+
+function render(){
+ if(page==="equipment")renderEquipment();
+ if(page==="clients")renderClients();
+ if(page==="prices")renderPrices();
+ if(page==="history")renderHistory();
+}
+function renderEquipment(){
+ const free=db.equipment.filter(x=>x.status==="available").length,rent=db.equipment.filter(x=>x.status==="rented").length;
+ document.getElementById("stats").innerHTML=`<div class="stat"><b>${db.equipment.length}</b><span>Всего единиц</span></div><div class="stat"><b>${free}</b><span>Свободно</span></div><div class="stat"><b>${rent}</b><span>В аренде</span></div><div class="stat"><b>${money(db.equipment.filter(x=>x.status==="rented").reduce((a,x)=>a+x.price,0))}</b><span>Текущая аренда / день</span></div>`;
+ let q=document.getElementById("search").value.toLowerCase();
+ let list=db.equipment.filter(x=>`${x.name} ${x.code} ${x.category} ${x.client||""}`.toLowerCase().includes(q));
+ document.getElementById("cards").innerHTML=list.length?list.map(x=>`<article class="card"><div class="card-top"><div><h3>${esc(x.name)}</h3><div class="muted">${esc(x.code)} · ${esc(x.category)}</div></div><span class="badge ${x.status==="available"?"ok":"rent"}">${x.status==="available"?"Свободно":"В аренде"}</span></div><div class="info"><div>Цена / день<b>${money(x.price)}</b></div><div>${x.status==="rented"?"Клиент":"Состояние"}<b>${esc(x.status==="rented"?x.client:"Готово")}</b></div></div>${x.status==="rented"?`<div class="muted">Вернуть: ${esc(x.due||"—")}</div>`:""}<br><button class="btn ${x.status==="available"?"primary":""}" onclick="rent(${x.id})">${x.status==="available"?"Сдать в аренду":"Принять возврат"}</button></article>`).join(""):`<div class="empty">Оборудование не найдено</div>`;
+}
+function renderClients(){document.getElementById("clientsTable").innerHTML=`<table><thead><tr><th>Клиент</th><th>Телефон</th><th>Email</th><th>Сделок</th></tr></thead><tbody>${db.clients.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${c.deals}</td></tr>`).join("")}</tbody></table>`}
+function renderPrices(){document.getElementById("pricesTable").innerHTML=`<table><thead><tr><th>Категория</th><th>Оборудование</th><th>День</th><th>Неделя</th></tr></thead><tbody>${db.prices.map(p=>`<tr><td>${esc(p.category)}</td><td><b>${esc(p.name)}</b></td><td>${money(p.day)}</td><td>${money(p.week)}</td></tr>`).join("")}</tbody></table>`}
+function renderHistory(){document.getElementById("historyTable").innerHTML=db.history.length?`<table><thead><tr><th>Дата</th><th>Операция</th><th>Оборудование</th><th>Клиент</th></tr></thead><tbody>${db.history.slice().reverse().map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.action)}</td><td>${esc(h.equipment)}</td><td>${esc(h.client||"—")}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">История пока пустая</div>`}
+
+function modal(title,body,foot){document.getElementById("modalTitle").textContent=title;document.getElementById("modalBody").innerHTML=body;document.getElementById("modalFoot").innerHTML=foot;document.getElementById("backdrop").style.display="flex"}
+function closeModal(){document.getElementById("backdrop").style.display="none"}
+function equipmentModal(){modal("Новое оборудование",`<div class="form"><div class="field"><label>Название</label><input id="eName"></div><div class="field"><label>Инв. номер</label><input id="eCode" placeholder="EQ-005"></div><div class="field"><label>Категория</label><input id="eCat"></div><div class="field"><label>Цена / день</label><input id="ePrice" type="number"></div></div>`,`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="addEquipment()">Добавить</button>`)}
+function addEquipment(){if(!eName.value)return;db.equipment.push({id:Date.now(),name:eName.value,code:eCode.value,category:eCat.value,price:+ePrice.value||0,status:"available"});save();closeModal();render()}
+function clientModal(){modal("Новый клиент",`<div class="form"><div class="field"><label>Имя / компания</label><input id="cName"></div><div class="field"><label>Телефон</label><input id="cPhone"></div><div class="field"><label>Email</label><input id="cEmail"></div></div>`,`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="addClient()">Добавить</button>`)}
+function addClient(){if(!cName.value)return;db.clients.push({id:Date.now(),name:cName.value,phone:cPhone.value,email:cEmail.value,deals:0});save();closeModal();render()}
+function priceModal(){modal("Новая цена",`<div class="form"><div class="field"><label>Категория</label><input id="pCat"></div><div class="field"><label>Оборудование</label><input id="pName"></div><div class="field"><label>За день</label><input id="pDay" type="number"></div><div class="field"><label>За неделю</label><input id="pWeek" type="number"></div></div>`,`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="addPrice()">Добавить</button>`)}
+function addPrice(){db.prices.push({id:Date.now(),category:pCat.value,name:pName.value,day:+pDay.value||0,week:+pWeek.value||0});save();closeModal();render()}
+function rent(id){
+ const x=db.equipment.find(e=>e.id===id);
+ if(x.status==="rented"){x.status="available";db.history.push({date:new Date().toLocaleString("ru-RU"),action:"Возврат",equipment:x.name,client:x.client});x.client=null;x.due=null;save();render();return}
+ const options=db.clients.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("");
+ modal("Выдача оборудования",`<div class="field"><label>Клиент</label><select id="rClient">${options}</select></div><br><div class="field"><label>Дата возврата</label><input id="rDue" type="date"></div>`,`<button class="btn" onclick="closeModal()">Отмена</button><button class="btn primary" onclick="confirmRent(${id})">Оформить аренду</button>`);
+}
+function confirmRent(id){const x=db.equipment.find(e=>e.id===id);x.status="rented";x.client=rClient.value;x.due=rDue.value;const c=db.clients.find(c=>c.name===x.client);if(c)c.deals++;db.history.push({date:new Date().toLocaleString("ru-RU"),action:"Выдача",equipment:x.name,client:x.client});save();closeModal();render()}
+render();
+</script>
+</body>
+</html>
