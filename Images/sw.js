@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='rental-equipment-static-v4';
+const CACHE='rental-equipment-static-v5';
 const FILES=['./','./index.html','./assets/app.css','./assets/app.js','./assets/domain.js','./assets/repository.js','./assets/cloud.js','./assets/xlsx-lite.js','./manifest.webmanifest','./assets/icons/app.svg','./assets/icons/apple-touch-icon.png','./assets/icons/app-192.png','./assets/icons/app-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('rental-equipment-static-')&&k!==CACHE).map(k=>caches.delete(k))))));
